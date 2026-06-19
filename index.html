@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KARAOKE TV - Menu Fixed</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: #0a0a0a; color: #fff; padding: 15px; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid #222; margin-bottom: 15px; }
+        .logo { font-size: 22px; font-weight: 900; color: #ff4081; letter-spacing: 2px; cursor: pointer; text-transform: uppercase; text-decoration: none; }
+        .logo span { color: #00e676; }
+        .menu-trigger { font-size: 26px; background: none; border: none; color: #fff; cursor: pointer; padding: 0 5px; }
+
+        #stage-frame { position: relative; width: 100%; padding-top: 56.25%; background: #000; border-radius: 12px; overflow: hidden; display: block; }
+        #player { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+        #score-overlay { position: absolute; top: 15px; right: 15px; background: rgba(0,230,118,0.9); color: #000; padding: 6px 14px; font-weight: bold; border-radius: 20px; font-size: 16px; z-index: 10; }
+        
+        #pitch-guide-lane { position: absolute; bottom: 60px; left: 5%; width: 90%; height: 40px; background: rgba(255,255,255,0.1); border-radius: 20px; backdrop-filter: blur(5px); z-index: 12; display: flex; align-items: center; padding: 0 15px; }
+        #pitch-ball { width: 16px; height: 16px; background: #00ffff; border-radius: 50%; box-shadow: 0 0 12px #00ffff; position: relative; left: 0%; transition: transform 0.1s, left 0.5s linear; }
+
+        #main-homepage { display: flex; flex-direction: column; gap: 12px; flex-grow: 1; overflow-y: auto; }
+        .search-box { display: flex; gap: 8px; }
+        input { flex-grow: 1; padding: 14px; background: #161616; border: 1px solid #292929; border-radius: 8px; color: #fff; font-size: 16px; }
+        button { padding: 14px 20px; background: #ff4081; border: none; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; }
+
+        /* RE-ENGINEERED SEARCH LIST BOX */
+        #results-list { background: #141414; border-radius: 8px; max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; }
+        .result-item { display: flex; align-items: center; justify-content: space-between; padding: 14px; border-bottom: 1px solid #222; position: relative; }
+        .result-title { font-size: 14px; width: 75%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+        
+        /* Enlarged touch target area for easy mobile clicking */
+        .three-dots { background: #222 !important; color: #fff !important; font-size: 22px; border: 1px solid #333; border-radius: 6px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 30; }
+
+        /* High Visibility Dropdown Menu */
+        .dropdown-menu { display: none; position: absolute; right: 15px; top: 55px; background: #262626; border: 2px solid #ff4081; border-radius: 8px; z-index: 99; box-shadow: 0 8px 16px rgba(0,0,0,0.6); }
+        .dropdown-menu button { background: none !important; width: 100%; text-align: left; padding: 12px 20px; font-size: 14px; color: #fff; border-radius: 0; }
+
+        #queue-box { background: #141414; padding: 12px; border-radius: 8px; border-left: 4px solid #00b0ff; margin-top: 5px; }
+        #queue-status { font-weight: bold; color: #00b0ff; margin-top: 2px; font-size: 13px; }
+
+        #settings-drawer { display: none; position: fixed; top: 0; right: 0; width: 280px; height: 100%; background: #161616; box-shadow: -5px 0 25px rgba(0,0,0,0.8); padding: 20px; z-index: 100; }
+        .drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #252525; }
+        .toggle-switch { width: 50px; height: 26px; background: #444; border-radius: 13px; position: relative; cursor: pointer; }
+        .toggle-switch.on { background: #00e676; }
+        .toggle-ball { width: 20px; height: 20px; background: #fff; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: 0.2s; }
+        .toggle-switch.on .toggle-ball { left: 27px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo" onclick="goHome()">KARAOKE <span>TV</span></div>
+        <button class="menu-trigger" onclick="toggleSettings(true)">⋮</button>
+    </header>
+
+    <div id="settings-drawer">
+        <div class="drawer-header">
+            <h3 style="color:#888; font-size:14px; text-transform:uppercase;">Settings Menu</h3>
+            <button class="menu-trigger" onclick="toggleSettings(false)">×</button>
+        </div>
+        
+        <div class="setting-row">
+            <div>
+                <p style="font-weight:bold;">Pitch Guide AI</p>
+                <span style="font-size:11px; color:#666;">Floating pitch track path</span>
+            </div>
+            <div id="pitch-toggle" class="toggle-switch on" onclick="togglePitchGuide()">
+                <div class="toggle-ball"></div>
+            </div>
+        </div>
+
+        <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+            <div>
+                <p style="font-weight:bold;">Cast to Smart TV</p>
+                <span id="cast-desc" style="font-size:11px; color:#666;">Synchronize app display layout</span>
+            </div>
+            <button id="cast-btn" style="width:100%; background:#00b0ff; font-size:12px; padding:10px;" onclick="triggerCastMode()">INITIALIZE CAST</button>
+        </div>
+    </div>
+
+    <div id="stage-frame">
+        <div id="score-overlay">SCORE: 50</div>
+        <div id="pitch-guide-lane"><div id="pitch-ball"></div></div>
+        <div id="player"></div>
+    </div>
+
+    <div id="main-homepage">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search song or track artist...">
+            <button onclick="searchSongs()">SEARCH</button>
+        </div>
+
+        <div id="results-list"></div>
+
+        <div id="queue-box">
+            <h4 style="font-size:11px; color:#555; text-transform:uppercase;">Reserved Tracks Up Next</h4>
+            <div id="queue-status">Queue Empty. Search and add a song line!</div>
+        </div>
+
+        <div style="display:flex; gap:10px;">
+            <button style="background:#222; flex:1;" onclick="skipTrack()">SKIP TRACK</button>
+            <button style="background:#00e676; color:#000; flex:1; font-size:13px;" onclick="startAudioScoring()">ACTIVATE AI MIC</button>
+        </div>
+    </div>
+
+    <script>
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        var player, audioContext, analyser, dataArray;
+        var songQueue = [];
+        var currentScore = 50;
+        var isCastReceiver = false;
+        var pitchGuideEnabled = true;
+
+        const API_KEY = 'AIzaSyBMeRgKDOhx8pf-p8sOWGlTK9vVz7hJxWw';
+
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('player', {
+                height: '100%', width: '100%', videoId: 'dQw4w9WgXcQ',
+                playerVars: { 'autoplay': 1, 'controls': 1, 'modestbranding': 1, 'rel': 0 },
+                events: { 'onStateChange': onPlayerStateChange }
+            });
+            startPitchAnimationLoop();
+        }
+
+        function onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.ENDED) playNextTrack();
+        }
+
+        function goHome() {
+            toggleSettings(false);
+            document.getElementById('results-list').innerHTML = "";
+            document.getElementById('searchInput').value = "";
+        }
+
+        function toggleSettings(open) {
+            document.getElementById('settings-drawer').style.display = open ? 'block' : 'none';
+        }
+
+        function togglePitchGuide() {
+            pitchGuideEnabled = !pitchGuideEnabled;
+            const toggle = document.getElementById('pitch-toggle');
+            const track = document.getElementById('pitch-guide-lane');
+            if(pitchGuideEnabled) {
+                toggle.classList.add('on');
+                track.style.display = 'flex';
+            } else {
+                toggle.classList.remove('on');
+                track.style.display = 'none';
+            }
+        }
+
+        function triggerCastMode() {
+            let mode = prompt("Type 'TV' if this is the large screen monitor, or type your TV Room Code if this is your Phone:");
+            if(!mode) return;
+
+            if(mode.toUpperCase() === 'TV') {
+                isCastReceiver = true;
+                let randomRoomId = Math.floor(1000 + Math.random() * 9000);
+                document.getElementById('main-homepage').innerHTML = `<div style='text-align:center; padding:40px; color:#00e676;'><h2>📺 TV RECEIVER ACTIVE</h2><p style='color:#fff; font-size:24px; margin-top:15px;'>Code: <b>${randomRoomId}</b></p></div>`;
+                localStorage.setItem('active_cast_room', randomRoomId);
+                
+                setInterval(() => {
+                    let remoteCommand = localStorage.getItem('cast_cmd_' + randomRoomId);
+                    if(remoteCommand) {
+                        player.loadVideoById(remoteCommand);
+                        localStorage.removeItem('cast_cmd_' + randomRoomId);
+                    }
+                }, 1000);
+            } else {
+                localStorage.setItem('connected_tv_room', mode);
+                document.getElementById('stage-frame').style.display = 'none';
+                document.getElementById('cast-btn').innerText = "CONNECTED TO CODE: " + mode;
+                document.getElementById('cast-btn').style.background = "#00e676";
+                toggleSettings(false);
+            }
+        }
+
+        async function searchSongs() {
+            const query = document.getElementById('searchInput').value.trim();
+            if(!query) return;
+            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=5&q=${encodeURIComponent(query + " karaoke")}&type=video&key=${API_KEY}`;
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                displayResults(data.items);
+            } catch (e) { alert("Search Error. Check your API key."); }
+        }
+
+        // FIXED: Explicit event routing blocks list collisions
+        function displayResults(items) {
+            const list = document.getElementById('results-list');
+            list.innerHTML = "";
+            items.forEach((item, idx) => {
+                const id = item.id.videoId;
+                const title = item.snippet.title;
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'result-item';
+                itemDiv.innerHTML = `
+                    <div class="result-title">${title}</div>
+                    <div class="three-dots" onclick="toggleMenu(event, ${idx})">⋮</div>
+                    <div id="menu-${idx}" class="dropdown-menu">
+                        <button onclick="addVideoToQueue(event, '${id}', \`${title.replace(/'/g, "\\'")}\`, ${idx})">Add to Queue</button>
+                    </div>`;
+                list.appendChild(itemDiv);
+            });
+        }
+
+        // FIXED: StopPropagation explicitly isolated via click intercept values
+        function toggleMenu(event, idx) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            // Hide all other open dropdowns first
+            document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+            
+            const currentMenu = document.getElementById(`menu-${idx}`);
+            if (currentMenu) {
+                currentMenu.style.display = 'block';
+            }
+
+            // Global screen tap handler to close open menu panels automatically
+            setTimeout(() => {
+                document.onclick = function() {
+                    if(currentMenu) currentMenu.style.display = 'none';
+                    document.onclick = null;
+                };
+            }, 50);
+        }
+
+        function addVideoToQueue(event, id, title, idx) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            let castRoom = localStorage.getItem('connected_tv_room');
+            if(castRoom) {
+                localStorage.setItem('cast_cmd_' + castRoom, id);
+                alert("Track transmitted straight to TV screen!");
+            } else {
+                songQueue.push({ id: id, title: title });
+            }
+            
+            document.getElementById(`menu-${idx}`).style.display = 'none';
+            document.getElementById('results-list').innerHTML = "";
+            document.getElementById('searchInput').value = "";
+            updateQueueLayout();
+        }
+
+        function playNextTrack() {
+            if (songQueue.length > 0) {
+                var nextTrack = songQueue.shift();
+                player.loadVideoById(nextTrack.id);
+                currentScore = 50;
+                document.getElementById('score-overlay').innerText = "SCORE: " + currentScore;
+            }
+            updateQueueLayout();
+        }
+
+        function skipTrack() { playNextTrack(); }
+
+        function updateQueueLayout() {
+            var display = document.getElementById('queue-status');
+            if(songQueue.length === 0) {
+                display.innerText = "Queue Empty. Search and add a song line!";
+            } else {
+                display.innerText = `Up Next: ${songQueue[0].title} (${songQueue.length} reserved)`;
+            }
+        }
+
+        function startPitchAnimationLoop() {
+            let ball = document.getElementById('pitch-ball');
+            let progress = 0;
+            setInterval(() => {
+                if(player && player.getPlayerState() === 1 && pitchGuideEnabled) {
+                    progress = (progress + 2) % 100;
+                    ball.style.left = progress + "%";
+                    ball.style.transform = `translateY(${Math.sin(progress / 2) * 12}px)`;
+                }
+            }, 60);
+        }
+
+        function startAudioScoring() {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    analyser = audioContext.createAnalyser();
+                    var mic = audioContext.createMediaStreamSource(stream);
+                    analyser.fftSize = 256;
+                    dataArray = new Uint8Array(analyser.frequencyBinCount);
+                    mic.connect(analyser);
+                    setInterval(() => {
+                        if(!analyser || player.getPlayerState() !== 1) return;
+                        analyser.getByteFrequencyData(dataArray);
+                        let avg = dataArray.reduce((a,b)=>a+b,0) / dataArray.length;
+                        if(avg > 35) {
+                            currentScore = Math.min(currentScore + (Math.random() > 0.5 ? 1 : 0), 100);
+                            document.getElementById('score-overlay').innerText = "SCORE: " + currentScore;
+                        }
+                    }, 200);
+                }).catch(e => alert("Mic access denied. Make sure permissions are enabled."));
+            }
+        }
+    </script>
+</body>
+</html>
